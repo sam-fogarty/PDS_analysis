@@ -2,7 +2,6 @@
 # readwave_afe.py -- plot waveforms from the channels in AFEs from DAPHNE OUTPUT spy buffer(s) Python3
 # 
 # Manuel Arroyave <arroyave@fnal.gov>
-# Sam Fogarty <samuel.fogarty@colostate.edu>
 
 from oei import *
 import numpy as np 
@@ -10,61 +9,36 @@ from tqdm import tqdm
 import h5py
 import time
 import os
-import argparse
 
 def main():
-    parser = argparse.ArgumentParser(description='DAPHNEv2 datataking script with SPI buffers')
-    parser.add_argument('--file_descriptor', help='File descriptor to go into output filename', default=None)
-    parser.add_argument('--nWaveforms', help='Number of waveforms to acquire from each channel', default=None)
-    parser.add_argument('--daphne_endpoint', help='DAPHNE IP address endpoint', default=None)
-    parser.add_argument('--read_all_channels', help='Option to save all channels', default=False)
-    parser.add_argument('--do_software_trigger', help='Option to use software trigger for acquisition', default=True)
-    parser.add_argument('--avg_waveforms', help='Option to save an averaged waveform of all waveforms', default=False)
-    args = parser.parse_args()
-    if args.file_descriptor is not None:
-        file_descriptor = args.file_descriptor
-    else:
-        raise Exception('Need a file descriptor, e.g. --file_descriptor daphne_test')
-    if args.nWaveforms is None:
-        nWaveforms = args.nWaveforms
-    else:
-        nWaveforms = 10000
-    if args.daphne_endpoint is None:
-        daphne_ip_endpoint = 100
-    else:
-        daphne_ip_endpoint = args.daphne_endpoint
-
-    if os.path.exists(f'{file_descriptor}.h5'):
-        raise Exception('Output file '+ f'{file_descriptor}.h5' + ' already exists.')
-    if os.path.exists(f'{file_descriptor}.csv'):
-        raise Exception('Output file '+ f'{file_descriptor}.csv' + ' already exists.')
-    read_all_channels = args.read_all_channels
-    do_software_trigger = args.do_software_trigger
-    avg_waveforms = args.avg_waveforms
+    
+    output_filepath = 'VGAIN_BIAS_tests_March12024/daphne_fnal_config5_VGAIN0_BIAS47_10MHzPGALPFON_openchannel.h5' # must be a .h5 file
+    if os.path.exists(output_filepath):
+        raise Exception('Output file '+ str(output_filepath) + ' already exists.')
+    
     keep_acquiring = True
-
-    if read_all_channels:
-        channels = [0,1,2,3,4,5,6,7]
-        AFEs = [0,1,2,3,4]
-        print(f'Reading all channels and all AFEs.')
-    else:
-        channels = [0]
-        AFEs = [0]
-        print(f'Reading only channels {channels}, AFEs {AFEs}')
+    nWaveforms = 10000
+    ###### edit these lines depending on the daphne, AFEs, and channels you want to look at 
+    # for the daphne you'd like to look at, put the endpoint of its ip address here
+    daphne_ip_endpoint = 100
+    # put number that's on sticker. Used for labeling plot.
+    daphne_sticker = 3
+    # list the channels you'd like to plot
+    channels = [0]
+    #channels = [0,1]
+    # AFEs to look at
+    AFEs = [0] # 0, 1, 2, 3, and/or 4
+    #######
     
     # don't change these
     base_register = 0x40000000
     AFE_hex_base = 0x100000
-    Channel_hex_base = 0x10000  
+    Channel_hex_base = 0x10000
+         
+    do_software_trigger = False
         
     thing = OEI(f"10.73.137.{daphne_ip_endpoint}")
-    print(f'Reading from DAPHNE with IP: {10.73.137.{daphne_ip_endpoint}}')
-    if do_software_trigger:
-        print('Using software (random) trigger for acquisition.')
-    else:
-        print('Assuming external trigger for acquisition.')
-    print(f'Reading {nWaveforms} waveforms from each channel.')
-
+    
     data_dtype = np.dtype([('adc', '<i4', (4000,)), ('channel', '<i2'), ('AFE', '<i2')])
     rec = np.zeros((len(AFEs)*len(channels)*nWaveforms), dtype=data_dtype)
     start_acquisition = time.time()
@@ -92,7 +66,8 @@ def main():
                 rec[iWvfm]['channel'] = channel
                 iWvfm += 1
     
-    if avg_waveforms:
+    average_waveforms = False
+    if average_waveforms:
         # average waveforms
         rec_avg = np.zeros((len(AFEs)*len(channels)), dtype=data_dtype)
         iWvfm = 0
@@ -105,14 +80,10 @@ def main():
                 rec_avg[iWvfm]['channel'] = channel 
                 iWvfm += 1
     
-    with h5py.File(f'{file_descriptor}.h5', 'w') as f:
+    with h5py.File(output_filepath, 'w') as f:
         dset_waveforms = f.create_dataset('waveforms', data=rec, dtype=data_dtype)
-        if avg_waveforms:
+        if average_waveforms:
             dset_waveforms_avg = f.create_dataset('waveforms_avg', data=rec_avg, dtype=data_dtype)
-    # save csv
-    start_index = 0
-    stop_index = 4000
-    np.savetxt(f'{file_descriptor}.csv', np.array(f['waveforms']['adc'][:], dtype='i4')[:, start_index:stop_index], delimiter=',', fmt='%d')
     end_acquisition = time.time()
     print(f'Total time to acquire {nWaveforms} waveforms was {"%.3f" % (end_acquisition-start_acquisition)} seconds with a rate of {"%.3f" % (nWaveforms / (end_acquisition-start_acquisition))} Hz')    
     thing.close()
