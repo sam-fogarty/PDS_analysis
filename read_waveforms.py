@@ -16,11 +16,15 @@ def main(trig_type, EP, length, ch, afe):
     ###### edit these lines depending on the daphne, AFEs, and channels you want to look at 
     # for the daphne you'd like to look at, put the endpoint of its ip address here
     ip = f"10.73.137.{EP}"
-    # put number that's on sticker. Used for labeling plots
-    # list the channels you'd like to plot
+    
+    # list the channels and AFEs you'd like to plot
+    # Can specify channels and AFEs in the commandline, e.g.:
+    # --ch 0,1,2 plots channels 0-2 on all AFEs,
+    # --afe 0,1 plots all channels on AFEs 0-1
+    # --ch 0,1 --afe 0,1,2 plots channels 0-1 in AFEs 0-2
+    # if not specified. automatically plots all channels and AFEs
     if ch is None and afe is None:
         channels = [0,1,2,3,4,5, 6,7]
-        # AFEs to look at
         AFEs = [0,1,2,3,4] # 0, 1, 2, 3, and/or 4
     elif ch is not None and afe is None:
         channels = [int(c) for c in ch.split(',')]
@@ -33,8 +37,8 @@ def main(trig_type, EP, length, ch, afe):
         AFEs = [int(a) for a in afe.split(',')]
     else:
         raise Exception('Invalid ch and afe arguments.')
+    
     #######
-    #print(f'Acquiring and plotting {len(channels)} channels and {len(AFEs)} AFEs in DAPHNE with endpoint {daphne_ip_endpoint}')
     # plot-related stuff to adjust for showing different numbers of AFEs
     if len(AFEs) == 1:
         figsize = (7,5)
@@ -50,18 +54,19 @@ def main(trig_type, EP, length, ch, afe):
         nrows, ncols = 2, 3
     
     plt.ion()
+
     # don't change these
     base_register = 0x40000000
     AFE_hex_base = 0x100000
     Channel_hex_base = 0x10000
     
+    # set trig type, software trigger is default
     if trig_type == 'soft':
         do_software_trigger = True
     elif trig_type == 'ext':
         do_software_trigger = False
     else:
         raise ValueError(f"Invalid trig type {trig_type}, possible values: soft, ext")
-    print(do_software_trigger)
     thing = OEI(ip)
     
     colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple', 'tab:brown', 'tab:gray', 'tab:olive']
