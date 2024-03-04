@@ -9,22 +9,30 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 from tqdm import tqdm
+import argparse
 
-def main():
+def main(trig_type, EP, length, ch, afe):
     keep_plotting = True
     ###### edit these lines depending on the daphne, AFEs, and channels you want to look at 
     # for the daphne you'd like to look at, put the endpoint of its ip address here
-    ip = "10.73.137.100"
+    ip = f"10.73.137.{EP}"
     # put number that's on sticker. Used for labeling plots
     # list the channels you'd like to plot
-    all_channels=True
-    if all_channels:
+    if ch is None and afe is None:
         channels = [0,1,2,3,4,5, 6,7]
         # AFEs to look at
         AFEs = [0,1,2,3,4] # 0, 1, 2, 3, and/or 4
+    elif ch is not None and afe is None:
+        channels = [int(c) for c in ch.split(',')]
+        AFEs = [0,1,2,3,4]
+    elif ch is None and afe is not None:
+        channels = [0,1,2,3,4,5,6,7]
+        AFEs = [int(a) for a in afe.split(',')]
+    elif ch is not None and afe is not None:
+        channels = [int(c) for c in ch.split(',')]
+        AFEs = [int(a) for a in afe.split(',')]
     else:
-        channels = [0]
-        AFEs = [0]
+        raise Exception('Invalid ch and afe arguments.')
     #######
     #print(f'Acquiring and plotting {len(channels)} channels and {len(AFEs)} AFEs in DAPHNE with endpoint {daphne_ip_endpoint}')
     # plot-related stuff to adjust for showing different numbers of AFEs
@@ -46,12 +54,19 @@ def main():
     base_register = 0x40000000
     AFE_hex_base = 0x100000
     Channel_hex_base = 0x10000
-         
-    do_software_trigger = True
-        
+    
+    if trig_type == 'soft':
+        do_software_trigger = True
+    elif trig_type == 'ext':
+        do_software_trigger = False
+    else:
+        raise ValueError(f"Invalid trig type {trig_type}, possible values: soft, ext")
+    print(do_software_trigger)
     thing = OEI(ip)
     
     colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple', 'tab:brown', 'tab:gray', 'tab:olive']
+    chunk_length=50 # how many points to read at a time
+    chunks=int(length/chunk_length)
     while keep_plotting:
         total_time = 0
         fig, axes = plt.subplots(nrows=nrows, ncols=ncols, sharex=False, sharey=False, figsize=figsize)
@@ -67,9 +82,6 @@ def main():
             start = time.time()
             # this list of lists is used to store waveform data
             rec = [[] for i in range(len(channels))]
-            length=4000
-            chunk_length=50
-            chunks=int(length/chunk_length)
             for i in range (chunks):
                 for d,channel in enumerate(channels):
                     doutrec = thing.read(base_register+(AFE_hex_base * AFE)+(Channel_hex_base * channel)+i*chunk_length,chunk_length)
@@ -98,7 +110,7 @@ def main():
                 plot.plot(rec[d][0:-1], linewidth=0.5,color=colors[channel], label=f'ch {channel}')
                 plot.set_xlabel('samples', fontsize=8)
                 plot.legend(loc='lower right',fontsize='xx-small',framealpha=0.5)
-                plot.set_xlim(1000, 2000)
+                #plot.set_xlim(1000, 2000)
         
         if len(AFEs) == 5:
             axes[1, 2].remove()
@@ -122,4 +134,11 @@ def main():
             continue
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Script for plotting waveforms from DAPHNE SPI buffers.")
+    parser.add_argument('--trig', default='soft', required=False,help="'soft' to use software trigger, 'ext' to use external trigger (i.e. not software trigger)")
+    parser.add_argument('--ep', required=True, help='DAPHNE IP endpoint (assuming IP starts with 10.73.137.')
+    parser.add_argument('--points', default=4000, required=False, help="Number of data points in waveform to read from SPI buffers")
+    parser.add_argument('--ch', required=False, default=None, help="List of channels to read from, formatted like '0,1,2'")
+    parser.add_argument('--afe', required=False, default=None, help="List of AFEs to read from, formatted like '0,1'")
+    args = parser.parse_args()
+    main(args.trig, args.ep, args.points, args.ch, args.afe)
