@@ -40,13 +40,11 @@ def write_and_read(thing, CmdString, get_response=True):
         ResString = ResString + chr(0)
         #print(ResString)
 
-def main():
+def main(EP, offset, VGAIN):
 
-    offset = 1118
     channels = [0,1,2,3,4,5,6,7]
     AFEs = [0,1,2,3,4]
-    VGAIN = 0
-    IP_endpoints = [100]
+    IP_endpoints = [ep for ep in EP.split(',')]
 
     for i in IP_endpoints:
         thing = OEI(f"10.73.137.{i}")
@@ -74,7 +72,12 @@ def main():
         thing.close()
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Script for configuring DAPHNE analog front end")
+    parser.add_argument('--ep', required=True, help='DAPHNE IP endpoint (assuming IP starts with 10.73.137.')
+    parser.add_argument('--offset', required=False, default=1118, help='Channel offset DAC value for all channels')
+    parser.add_argument('--vgain', required=False, default=600, help='VGAIN DAC setting to control gain/attenuation in DAPHNE')
+    args = parser.parse_args()
+    main(args.ep, args.offset, args.vgain)
 
 
 
