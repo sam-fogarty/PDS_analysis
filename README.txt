@@ -6,6 +6,7 @@ Scripts with descriptions:
 - read_waveforms.py ; read and plot waveforms from selected channels and plot them
 - turn_on_offset_integrators.py ; turn on the offset integrators for daphne v2's, should tune the pedestals to as close to 8196 as possible before doing this.
 
+Note: These scripts have to be run within the OEI/python directory in this git repo: https://github.com/DUNE/daphne2_fpga 
 Notebooks:
 - PDS_waveform analysis.ipynb ; read data from file and make spe persistence plots, charge integral histograms, SNR calculation
 - DAPHNE_randomTrigger_analysis.ipynb ; acquire random trigger data for calculating FFTs and RMS values
