@@ -4,12 +4,24 @@
 # Sam Fogarty <samuel.fogarty@colostate.edu> 
 # Manuel Arroyave <arroyave@fnal.gov>
 
-from oei import *
 import numpy as np 
 import matplotlib.pyplot as plt
 import time
 from tqdm import tqdm
 import argparse
+import DaphneInterface as ivtools
+
+def move_figure(f, x, y):
+    """Move figure's upper left corner to pixel (x, y)"""
+    backend = plt.get_backend()
+    if backend == 'TkAgg':
+        f.canvas.manager.window.wm_geometry("+%d+%d" % (x, y))
+    elif backend == 'WXAgg':
+        f.canvas.manager.window.SetPosition((x, y))
+    else:
+        # This works for QT and GTK
+        # You can also use window.setGeometry
+        f.canvas.manager.window.move(x, y)
 
 def main(trig_type, EP, length, ch, afe):
     keep_plotting = True
@@ -52,7 +64,7 @@ def main(trig_type, EP, length, ch, afe):
     elif len(AFEs) >= 4:
         figsize = (16, 9)
         nrows, ncols = 2, 3
-    
+     
     plt.ion()
 
     # don't change these
@@ -67,33 +79,35 @@ def main(trig_type, EP, length, ch, afe):
         do_software_trigger = False
     else:
         raise ValueError(f"Invalid trig type {trig_type}, possible values: soft, ext")
-    thing = OEI(ip)
-    
+    device = ivtools.daphne(ip)
+    print("DAPHNE firmware version %0X" % device.read_reg(0x9000,1)[2])
     colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple', 'tab:brown', 'tab:gray', 'tab:olive']
     chunk_length=50 # how many points to read at a time
     chunks=int(length/chunk_length)
     while keep_plotting:
         total_time = 0
         fig, axes = plt.subplots(nrows=nrows, ncols=ncols, sharex=False, sharey=False, figsize=figsize)
+        move_figure(fig, 200, 400)
         if len(AFEs) == 1:
             axes = [axes]
         if do_software_trigger:
-            thing.write(0x2000,[1234]) # trigger SPI buffer
+            device.write_reg(0x2000, [1234]) # trigger SPI buffer
         # this list of lists is used to store waveform data
         rec = [[] for i in range(len(channels))]
         # loop through AFEs, grab waveforms from channels and plot
-        
         for g,AFE in enumerate(tqdm(AFEs, desc='Processing AFEs: ')):
             start = time.time()
             # this list of lists is used to store waveform data
             rec = [[] for i in range(len(channels))]
+            current_timestamp = int(device.read_reg(0x40500000, 1)[2])
             for i in range (chunks):
                 for d,channel in enumerate(channels):
-                    doutrec = thing.read(base_register+(AFE_hex_base * AFE)+(Channel_hex_base * channel)+i*chunk_length,chunk_length)
+                    doutrec = device.read_reg(base_register+(AFE_hex_base * AFE)+(Channel_hex_base * channel)+i*chunk_length,chunk_length)
                     #print(f'len(doutrec) = {doutrec}')
                     #print(doutrec)
                     for word in doutrec[2:]:
                         rec[d].append(word)
+            last_timestamp = int(device.read_reg(0x40500000, 1)[2])
             end = time.time()
             total_time += end-start
             #print('Time to acquire: ', end-start)
@@ -112,10 +126,11 @@ def main(trig_type, EP, length, ch, afe):
                         if g == 3:
                             plot.set_ylabel('14 bits data')
                 plot.set_title(f'AFE{AFE}', fontsize=10)
+                #plot.plot(rec[d][0:-1]-np.mean(rec[d][0:-1][0:50]), linewidth=0.5,color=colors[channel], label=f'ch {channel}')
                 plot.plot(rec[d][0:-1], linewidth=0.5,color=colors[channel], label=f'ch {channel}')
                 plot.set_xlabel('samples', fontsize=8)
                 plot.legend(loc='lower right',fontsize='xx-small',framealpha=0.5)
-                #plot.set_xlim(1000, 2000)
+                #plot.set_xlim(0, 1000)
         
         if len(AFEs) == 5:
             axes[1, 2].remove()
@@ -123,19 +138,24 @@ def main(trig_type, EP, length, ch, afe):
             axes[1, 2].remove()
             axes[1, 1].remove()
         plt.show(block=False)
-        plt.pause(1)
+        plt.pause(3)
         print('Total time to acquire {len(channels) * len(AFEs)} channels is {"%.4f" % total_time} seconds.')
-        user_input = input("Enter 'a' to acquire again, 'q' to quit, or enter a new DAPHNE endpoint address (e.g. 107, 109).\n")
-        if user_input == 'q':
-            keep_plotting = False
-            thing.close()
-        elif user_input == 'a':
-            plt.close()
-            continue
-        elif user_input.isnumeric():
-            plt.close()
-            daphne_ip_endpoint = int(user_input)
+        use_user_input=True
+        if use_user_input:
+            user_input = input("Enter 'a' to acquire again, 'q' to quit, or enter a new DAPHNE endpoint address (e.g. 107, 109).\n")
+            if user_input == 'q':
+                keep_plotting = False
+                device.close()
+            elif user_input == 'a':
+                plt.close()
+                continue
+            elif user_input.isnumeric():
+                plt.close()
+                daphne_ip_endpoint = int(user_input)
+            else:
+                continue
         else:
+            plt.close()
             continue
 
 if __name__ == "__main__":
