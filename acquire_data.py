@@ -94,6 +94,7 @@ def main(filepath_start, trig_type, ep, length, ch, afe, nWaveforms, formats, sa
     formats_list = formats.split(',')
 
     if VGAIN is not None:
+        VGAIN = str(VGAIN)
         if len(VGAIN.split(',')) == 1:
             VGAINs_list = [float(VGAIN)]
         else:
@@ -122,7 +123,6 @@ def main(filepath_start, trig_type, ep, length, ch, afe, nWaveforms, formats, sa
     base_register = 0x40000000
     AFE_hex_base = 0x100000
     Channel_hex_base = 0x10000
-
     ch = np.array(ch.split(',')).astype('int')
 
     afe = int(afe)
@@ -262,12 +262,12 @@ if __name__ == "__main__":
     parser.add_argument('--trig', default='ext', required=False,help="'soft' to use software trigger, 'ext' to use external trigger (i.e. not software trigger)")
     parser.add_argument('--ep', required=True, help='DAPHNE IP endpoint (assuming IP starts with 10.73.137.')
     parser.add_argument('--points', default=1000, required=False, help="Number of data points in waveform to read from SPI buffers")
-    parser.add_argument('--ch', required=False, default=None, help="List of channels to read from, formatted like '0,1,2'")
-    parser.add_argument('--afe', required=False, default=None, help="List of AFEs to read from, formatted like '0,1'")
+    parser.add_argument('--ch', required=True, default=None, help="List of channels to read from, formatted like '0,1,2'")
+    parser.add_argument('--afe', required=True, default=None, help="List of AFEs to read from, formatted like '0,1'")
     parser.add_argument('--nWaveforms', required=False, default=10000, help='Total number of waveforms to acquire per channel.')
     parser.add_argument('--format', required=False, default='csv', help='Formats to save the data to. Options: h5, csv, npz. Comma separated formats will save the data in each format.')
     parser.add_argument('--saving_range', required=False, default=None, help='Range of data points to save to the output files. Formatted like start,stop.')
-    parser.add_argument('--VGAIN', required=False, default=1.0, help='VGAIN values to use in Volts. Separate values by comma, e.g. 0.0,0.1,0.2')
+    parser.add_argument('--VGAIN', required=False, default='1.0', help='VGAIN values to use in Volts. Separate values by comma, e.g. 0.0,0.1,0.2')
     parser.add_argument('--offset', required=False, default=1100, help='Initial offset value to use for tuning pedestals')
     parser.add_argument('--target_pedestal', required=False, default=8000, help='Target pedestal value for offset tuning.')
     args = parser.parse_args()
