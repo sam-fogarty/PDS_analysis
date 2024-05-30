@@ -92,7 +92,8 @@ class daphne(object):
             sleep(0.007)
             self.more -= 1
         response = response + chr(0)
-        return self.remove_control_characters(response)
+        #return self.remove_control_characters(response)
+        return response
 
     def read_current(self, ch=0,iterations=3):
         self.current = None
