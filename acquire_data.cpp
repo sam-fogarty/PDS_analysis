@@ -32,7 +32,7 @@ public:
 
     std::vector<unsigned long long> read_reg(unsigned long long addr, unsigned char size) {
         char cmd[10];
-        cmd[0] = 0x00;
+        cmd[0] = 0x00; // read operation
         cmd[1] = size;
         memcpy(cmd + 2, &addr, sizeof(addr));
 
@@ -40,16 +40,21 @@ public:
 
         char buffer[2 + 8 * size];
         recvfrom(sock, buffer, sizeof(buffer), 0, NULL, NULL);
-
-        std::vector<unsigned long long> result;
-        result.resize(size);
-        memcpy(&result[0], buffer, sizeof(result[0]) * size);
+        
+	// Unpack the response
+        std::vector<unsigned long long> result(size);
+        for (unsigned char i = 0; i < size; ++i) {
+             result[i] = *((unsigned long long*)(buffer + 2 + 8 * i));
+        }
+        //std::vector<unsigned long long> result;
+        //result.resize(size);
+        //memcpy(&result[0], buffer, sizeof(result[0]) * size);
         return result;
     }
 
     void write_reg(unsigned long long addr, std::vector<unsigned long long> data) {
-        char cmd[10 + 8 * data.size()];
-        cmd[0] = 0x01;
+        char cmd[10 + 8 * data.size()]; 
+        cmd[0] = 0x01; // write operation
         cmd[1] = data.size();
         memcpy(cmd + 2, &addr, sizeof(addr));
 
@@ -65,7 +70,7 @@ public:
     }
 };
 
-int daphne_c_test() {
+int main() {
     std::string ipaddr = "10.73.137.110";
     Daphne daphne(ipaddr);
     
@@ -92,7 +97,11 @@ int daphne_c_test() {
 
         // Read from the device
         std::vector<unsigned long long> doutrec = daphne.read_reg(address, chunk_length);
-
+	std::cout << "chunk " << i << std::endl;
+	for (unsigned long long j = 0; j < chunk_length; ++j){
+               std::cout << doutrec.at(j) << " ";
+	}
+	std::cout << std::endl;
         // Concatenate the doutrec vector to combined_result
         combined_result.insert(combined_result.end(), doutrec.begin(), doutrec.end());
     }
