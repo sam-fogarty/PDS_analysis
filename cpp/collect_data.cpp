@@ -5,18 +5,31 @@
 #include "daphne.h"
 #include <TFile.h>
 #include <TTree.h>
+#include <fstream>
+enum OutputMode { root, CSV };
 
-int main() {
+void parseArguments(int argc, char* argv[], std::string &filename) {
+     if (argc != 2) {
+         std::cerr << "Usage: " << argv[0] << " <filename>" << std::endl;
+	 exit(1);
+     }
+     filename = argv[1];
+}
+
+int main(int argc, char* argv[]) {
+
+    std::string filename;
+    parseArguments(argc, argv, filename);
+
     // setup connection with daphne
     std::string ipaddr = "10.73.137.110";
     Daphne daphne(ipaddr);
 
-    // setup root output file and tree to store data
-    TFile *file = new TFile("waveforms.root", "RECREATE");
-    TTree *tree = new TTree("waveforms", "Waveforms data");
-
     std::vector<unsigned long long> combined_result;
-    tree->Branch("waveform", &combined_result);
+
+    std::ofstream csvFile;
+    filename += ".csv"; 
+    csvFile.open(filename);
 
     // Set time limit for data collection
     auto start_time = std::chrono::steady_clock::now();
@@ -44,6 +57,7 @@ int main() {
     unsigned long long new_timestamp;
     unsigned long long iterations_last = 0;
     auto last_time = std::chrono::steady_clock::now();
+    std::cout << "starting taking data" << std::endl;
     while (std::chrono::steady_clock::now() < end_time) { // loop until time limit reached
         if (use_software_trigger) {
 	     daphne.write_reg(0x2000, {1234});
@@ -61,8 +75,14 @@ int main() {
             unsigned long long new_timestamp = daphne.read_reg(0x40500000, 1)[0];
             // only save waveform if no additional triggers happened while reading
 	    if (new_timestamp == current_timestamp) {
-            	tree->Fill();
-	    	++iteration;
+                   for (size_t i = 0; i < combined_result.size(); ++i) {
+		      csvFile << combined_result[i];
+	              if (i < combined_result.size() - 1) {
+		              csvFile << " ";
+			 }
+		      }
+		      csvFile << "\n";
+		      ++iteration;
 		}
 
 	    last_timestamp = new_timestamp;
@@ -97,9 +117,8 @@ int main() {
 	}
 
         }
-
-    file->Write();
-    file->Close();
+    
+    csvFile.close(); 
 
     daphne.close_conn();
 
