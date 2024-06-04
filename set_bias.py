@@ -37,6 +37,8 @@ def main(ep,afe,v):
     response_data = device.command(CmdString)
     print(response_data)
     
+    print(device.command('RD VM ALL'))
+
     device.close()
 
 if __name__ == "__main__":
