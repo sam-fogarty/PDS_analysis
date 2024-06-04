@@ -7,10 +7,9 @@ from tqdm import tqdm
 import pandas as pd
 
 def main(filename):
-    wvfms = np.genfromtxt(filename, delimiter=' ')
-
-    window_size = 3
-    pedestal_range = (0, 200)
+    wvfms = np.genfromtxt(filename, delimiter=' ', max_rows=10000)
+    window_size = 20
+    pedestal_range = (350, 450)
 
     # make array to store smoothed waveforms
     wvfm_corr = np.zeros((wvfms.shape[0], wvfms.shape[1]))
@@ -34,10 +33,10 @@ def main(filename):
     plt.figure(figsize=(10, 6))
     meanADC = np.mean(flattened_waveforms[~np.isnan(flattened_waveforms)])
     # Adjust the number of bins and range
-    ymax = meanADC+100
-    ymin = meanADC-100
-    num_bins_x = num_time_steps
-    num_bins_y = int(ymax - ymin)
+    ymax = 10
+    ymin = -70
+    num_bins_x = int(num_time_steps/1)
+    num_bins_y = int((ymax - ymin)/1)
     range_x = [0, num_time_steps*16]
     range_y = [ymin, ymax]
 
@@ -56,11 +55,12 @@ def main(filename):
     cbar = plt.colorbar()
 
     vmin=0
-    vmax=2200 # may need to adjust to better emphasize N p.e. waveform lines
+    vmax=500 # may need to adjust to better emphasize N p.e. waveform lines
     plt.clim(vmin=vmin, vmax=vmax)
+    
     #plt.ylim(-40, 10)
-    plt.xlim(6500, 10000)
-    plt.ylim(-50, 30)
+    plt.xlim(9000, 12000)
+    #plt.ylim(-50, 30)
     plt.show()
     
 
