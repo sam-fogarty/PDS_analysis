@@ -42,8 +42,11 @@ int main(int argc, char* argv[]) {
     unsigned long long AFE_hex_base = 0x100000;
     unsigned long long Channel_hex_base = 0x10000;
     unsigned long long length = 1000; // 1000 is fine for LED tests. 4000 is whole buffer (rate will be lower)
+    bool use_software_trigger = true; // true to use software trigger, make sure external trigger pulse is off
+    if (use_software_trigger) {
+	    length = 4000;
+    }
     unsigned long long chunks = length / chunk_length;
-    bool use_software_trigger = false; // true to use software trigger, make sure external trigger pulse is off
     bool use_iterations_limit = true; // limit the total number of waveforms saved, overrides time limit
     unsigned long long iterations_limit = 10000;
     if (use_iterations_limit){
