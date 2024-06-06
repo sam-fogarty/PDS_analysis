@@ -29,6 +29,10 @@ def main(ep,afe,v):
         dac = 0
     else:
         dac = DAC_for_V(afe, v)
+    
+    print('WR VBIASCTRL V 4095')
+    response_data = device.command('WR VBIASCTRL V 4095')
+    print(response_data)
 
     CmdString = f"WR AFE {afe} BIASSET V {dac}"
     print(CmdString)
@@ -37,6 +41,7 @@ def main(ep,afe,v):
     response_data = device.command(CmdString)
     print(response_data)
     
+    print('RD VM ALL')
     print(device.command('RD VM ALL'))
 
     device.close()
