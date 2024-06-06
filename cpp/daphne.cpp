@@ -42,7 +42,7 @@ std::vector<unsigned long long> Daphne::read_reg(unsigned long long addr, unsign
     // Unpack the response
     std::vector<unsigned long long> result(size);
     for (unsigned char i = 0; i < size; ++i) {
-        result[i] = *((unsigned long long*)(buffer + 2 + 8 * i)); // Apply scaling factor
+        result[i] = *((unsigned long long*)(buffer + 2 + 8 * i));
     }
 
     return result;
