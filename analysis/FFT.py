@@ -2,7 +2,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import warnings
 import time
-import argparse
+import fire
+import os
 
 class fft:
     def __init__(self, sig, dt=16e-9, plot=False):
@@ -40,8 +41,6 @@ class fft:
 
         self.x = freqAxisPos /10e5
         self.y = 20*np.log10(np.abs(sigFFTPos)/2**14)
-#wf=readwave(plot=True).wf
-#f=fft   (wf,dt=None,plot=True)     
         
 class mean_fft:
     def __init__(self, data,label=None,plot=False):
@@ -77,25 +76,17 @@ def calculate_rms_deviation(array):
     rms_deviation = np.sqrt(mean_squared_deviation)
     return rms_deviation
 
-def main():
-    ch = 4
-    afe = 0
-    filenames = [f'run39_2024516/VGAIN1p0/run39_2024516_EP110_VGAIN1p0_offset1118_OIsOFF_channel{ch}_AFE{afe}.csv', \
-                f'run40_2024516/VGAIN1p0/run40_2024516_EP110_VGAIN1p0_offset1118_OIsOFF_channel{ch}_AFE{afe}.csv']
-    #runnumber = 19 
-    #filenames = [f'run{runnumber}_2024512/VGAIN1p0/run{runnumber}_2024512_EP110_VGAIN1p0_offset1118_OIsOFF_channel{1}_AFE{afe}.csv', \
-    #            f'run{runnumber}_2024512/VGAIN1p0/run{runnumber}_2024512_EP110_VGAIN1p0_offset1118_OIsOFF_channel{6}_AFE{afe}.csv']
-
-    #colors = ['r', 'g', 'b', 'y']
-    #labels = ['CH1', 'CH3', 'CH4', 'CH6']
-    colors = ['r', 'g']
-    labels = ['Clean Room \n Wrapped Module', 'In Dewar \n Mini Module']
+def main(*filenames):
+    colors = ['r', 'b', 'k', 'm', 'y', 'g']
+    linestyles = ['-', '--', '-.', '.', '-', '--']
+    if not len(filenames):
+        raise Exception('Include some csv files!')
     for i, filename in enumerate(filenames):
         data = np.loadtxt(filename, delimiter=' ')
         fft_data = mean_fft(data[0:1000])
-        plt.plot(fft_data.x, fft_data.y, color=colors[i], label=labels[i], alpha=0.5)
+        plt.plot(fft_data.x, fft_data.y, color=colors[i], label=os.path.basename(filename).strip('.csv'), alpha=0.5)
     #plt.hist(rms_values)
-    plt.title(f'Mean FFTs of DAPHNE Waveforms \n (open channel)')
+    plt.title(f'Mean FFTs of DAPHNE Waveforms')
     plt.legend()
     plt.ylim([-120, -60])
     plt.ylabel("dBFS")
@@ -104,9 +95,6 @@ def main():
     plt.tight_layout()
     plt.xscale('log')
     plt.show()
-    
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Make RMS distributions")
-    args = parser.parse_args()
-    main()
+    fire.Fire(main)
