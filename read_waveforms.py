@@ -87,7 +87,7 @@ def main(trig_type, EP, length, ch, afe):
     while keep_plotting:
         total_time = 0
         fig, axes = plt.subplots(nrows=nrows, ncols=ncols, sharex=False, sharey=False, figsize=figsize)
-        move_figure(fig, 200, 400)
+        #move_figure(fig, 200, 400)
         if len(AFEs) == 1:
             axes = [axes]
         if do_software_trigger:
