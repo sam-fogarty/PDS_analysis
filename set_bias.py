@@ -4,7 +4,7 @@
 import DaphneInterface as ivtools
 import argparse
 
-def main(ep,afe,v):
+def main(ep,afe,v,run_type):
 
     afe = int(afe)
     v = float(v)
@@ -24,9 +24,16 @@ def main(ep,afe,v):
             return abs(round((v-0.00328)/0.0391))
         else:
             raise ValueError("We only have AFE's 0-4!")
-
+    if run_type == 'warm':
+        vlimit = 53
+    elif run_type == 'cold':
+        vlimit = 47
+    else:
+        raise Exception('run_type not recognized. warm or cold are only options')
     if v==0:
         dac = 0
+    elif v > vlimit:
+        raise Exception(f'Cannot set bias higher than {vlimit}')
     else:
         dac = DAC_for_V(afe, v)
     
@@ -51,5 +58,6 @@ if __name__ == "__main__":
     parser.add_argument('--ep', required=True, help='DAPHNE IP endpoint, e.g. 110')
     parser.add_argument('--afe', required=True, help='Which AFE are we setting bias for? Number 0-4')
     parser.add_argument('--v', required=True, help='What bias voltage do you want? Positive number')
+    parser.add_argument('--run_type', required=True, help='Run type. Choose warm for warm test and cold for cold test.')
     args = parser.parse_args()
-    main(args.ep,args.afe,args.v)
+    main(args.ep,args.afe,args.v, args.run_type)
