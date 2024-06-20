@@ -2,7 +2,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import warnings
 import time
-import argparse
+import fire
+import os
 
 class fft:
     def __init__(self, sig, dt=16e-9, plot=False):
@@ -77,31 +78,30 @@ def calculate_rms_deviation(array):
     rms_deviation = np.sqrt(mean_squared_deviation)
     return rms_deviation
 
-def main():
-    ch = 4
-    afe = 0
-    filenames = [f'run39_2024516/VGAIN1p0/run39_2024516_EP110_VGAIN1p0_offset1118_OIsOFF_channel{ch}_AFE{afe}.csv', \
-                f'run40_2024516/VGAIN1p0/run40_2024516_EP110_VGAIN1p0_offset1118_OIsOFF_channel{ch}_AFE{afe}.csv']
-    colors = ['r', 'g', 'b']
-    labels = ['Clean Room \n Wrapped Module', 'In Dewar \n Mini Module']
+def main(*filenames):
+    colors = ['r', 'b', 'k', 'm', 'y', 'g']
+    linestyles = ['-', '--', '-.', '.', '-', '--']
+    if not len(filenames):
+        raise Exception('Include some csv files!')
+    median_rms = []
     for i, filename in enumerate(filenames):
         data = np.loadtxt(filename, delimiter=' ')[0:1000]
         rms_values = []
         for wvfm in data:
             rms = calculate_rms_deviation(wvfm)
             rms_values.append(rms)
-        
-        plt.hist(rms_values, range=(0,5),bins=100,color=colors[i], label=labels[i], alpha=0.5)
+        median_rms.append(np.median(rms))
+        plot_data = plt.hist(rms_values, range=(0, 10),bins=250,color=colors[i], label=os.path.basename(filename).strip('.csv')+'\n'+f'median rms = {median_rms[i]}', alpha=0.5)
+        bin_contents = plot_data[0]
+        plt.vlines(x=median_rms[i], ymin=0, ymax=max(bin_contents)*1.2)
     #plt.hist(rms_values)
     plt.xlabel('ADC RMS')
     plt.ylabel('Counts')
-    plt.xlim(1,3)
-    plt.title(f'Waveform RMS \n Open Channel \n' + f'(channel {ch}, AFE {afe})')
+    #plt.xlim(1,3)
+    plt.title(f'Waveform RMS')
     plt.legend()
     plt.show()
     
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Make RMS distributions")
-    args = parser.parse_args()
-    main()
+    fire.Fire(main)
