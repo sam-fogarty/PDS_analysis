@@ -31,20 +31,21 @@ def main(filepath):
     # load data
     skiprows=0
     print(f'Loading waveforms from {filepath}')
-    wvfms = np.loadtxt(filepath, delimiter=' ', skiprows=skiprows)
-    nWvfms = len(wvfms)
+    wvfms_orig = np.loadtxt(filepath, delimiter=' ', skiprows=skiprows)
+    wvfms_orig_indices = np.arange(0, len(wvfms_orig), 1)
+    nWvfms = len(wvfms_orig)
     print('Finished loading waveforms.')
     # apply low pass to waveforms
     cutoff_freq = 3.5e6
     order=2
-    wvfms = apply_filter(wvfms, cutoff_freq, order)
+    wvfms = apply_filter(wvfms_orig, cutoff_freq, order)
 
     # remove waveforms with large overall standard deviations
     std_cut = 8
     std_mask = np.std(wvfms, axis=1) < std_cut
     wvfms = wvfms[std_mask]
     wvfms_less = np.sum(~std_mask) # make sure to subtract these from the total time in the end
-
+    wvfms_orig_indices = wvfms_orig_indices[std_mask]
     # subtract baseline
     baseline = np.mean(wvfms, axis=1)
     wvfms = wvfms - baseline[:, np.newaxis]
@@ -52,7 +53,8 @@ def main(filepath):
     # find above threshold samples; select waveforms with above threshold samples
     threshold_mask = wvfms < threshold
     wvfms = wvfms[np.sum(threshold_mask, axis=1) > 0]
-
+    wvfms_orig_indices = wvfms_orig_indices[np.sum(threshold_mask, axis=1) > 0]
+    
     template = np.load('Single_PE_Template.npy')
     start, end = 560, 900 # select signal in template
     template = template[start:end]
@@ -60,6 +62,7 @@ def main(filepath):
     correlation_threshold = 1000 # can increase this to get less large signals
     extra_signals = 0
     keep_array = np.zeros(len(wvfms), dtype=bool)
+    amplitudes = []
     # loop through each waveform and find ones with good correlation between template and itself
     for j, wvfm in tqdm(enumerate(wvfms)):
         i = 0
@@ -76,10 +79,13 @@ def main(filepath):
                 # keep track of which waveforms have any good correlations
                 if keep_array[j] == True and np.any(signal < threshold):
                     extra_signals += 1
+                    #np.save(f'wvfm_{i}.npy', wvfms_orig[wvfms_orig_indices[j]])
                 else:
                     keep_array[j] = True
+                    amplitudes.append(np.min(wvfm))
+                    #np.save(f'wvfm_{i}.npy', wvfms_orig[wvfms_orig_indices[j]])
                 i += 500 # skip ahead past the current signal and look for more signals in same waveform
-
+    np.save('amplitudes.npy', amplitudes)
     print(f'Keep {np.sum(keep_array)} waveforms due to good correlation')
     print(f'Found {extra_signals} extra signals in waveforms')
     
