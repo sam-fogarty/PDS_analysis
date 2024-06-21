@@ -76,15 +76,15 @@ def calculate_rms_deviation(array):
     rms_deviation = np.sqrt(mean_squared_deviation)
     return rms_deviation
 
-def main(*filenames):
+def main(*runnumbers):
     colors = ['r', 'b', 'k', 'm', 'y', 'g']
     linestyles = ['-', '--', '-.', '.', '-', '--']
-    if not len(filenames):
-        raise Exception('Include some csv files!')
-    for i, filename in enumerate(filenames):
-        data = np.loadtxt(filename, delimiter=' ')
-        fft_data = mean_fft(data[0:1000])
-        plt.plot(fft_data.x, fft_data.y, color=colors[i], label=os.path.basename(filename).strip('.csv'), alpha=0.5)
+    if not len(runnumbers):
+        raise Exception('Include some run numbers to plot!')
+    for i, runnumber in enumerate(runnumbers):
+        data = np.loadtxt(f'../cpp/data/run{runnumber}.csv', delimiter=' ', max_rows=1000)
+        fft_data = mean_fft(data)
+        plt.plot(fft_data.x, fft_data.y, color=colors[i], label=f'run{runnumber}', alpha=0.5)
     #plt.hist(rms_values)
     plt.title(f'Mean FFTs of DAPHNE Waveforms')
     plt.legend()
