@@ -3,8 +3,8 @@
 #include <chrono>
 #include <thread>
 #include "daphne.h"
-#include <TFile.h>
-#include <TTree.h>
+//#include <TFile.h>
+//#include <TTree.h>
 #include <fstream>
 #include "H5Cpp.h"
 
@@ -30,14 +30,22 @@ int main(int argc, char* argv[]) {
     Daphne daphne(ipaddr);
 
     std::vector<unsigned long long> combined_result;
+    hsize_t offset[2] = {0, 0};
 
     std::ofstream hdf5File;
-    filename += ".h5"; 
+    filename += ".hdf5"; 
     H5::H5File file(filename, H5F_ACC_TRUNC);
+    hsize_t initial_dims[2] = {0, 0};
+    hsize_t max_dims[2] = {H5S_UNLIMITED, H5S_UNLIMITED};
+    H5::DataSpace dataspace(2, initial_dims, max_dims);
+    H5::DataType uint64_type = H5::PredType::NATIVE_ULLONG;
 
-    hsize_t dimsf[1] = {1};
+    H5::DSetCreatPropList propList;
+    hsize_t chunk_dims[2] = {1, 1};  // Define the chunk dimensions (1x1 for simplicity)
+    propList.setChunk(2, chunk_dims);  // Set the chunk size for the dataset
 
-    H5::DataSpace memspace(1, dimsf);
+
+    H5::DataSet dataset = file.createDataSet(DATASET_NAME, uint64_type, dataspace, propList);
 
     // Set time limit for data collection
     auto start_time = std::chrono::steady_clock::now();
@@ -49,17 +57,23 @@ int main(int argc, char* argv[]) {
     unsigned long long base_register = 0x40000000;
     unsigned long long AFE_hex_base = 0x100000;
     unsigned long long Channel_hex_base = 0x10000;
-    unsigned long long length = 1000; // 1000 is fine for LED tests. 4000 is whole buffer (rate will be lower)
+    unsigned long long length = 4000; // 1000 is fine for LED tests. 4000 is whole buffer (rate will be lower)
     bool use_software_trigger = true; // true to use software trigger, make sure external trigger pulse is off
     if (use_software_trigger) {
 	    length = 4000;
     }
 
-    H5::DSetCreatPropList plist;
-    hsize_t chunk_dims[1] = {length}; // Chunk size: one row at a time
-    plist.setChunk(1, chunk_dims);
+    hsize_t Length = static_cast<hsize_t>(length);
+    const hsize_t hsizeArray[2] = { Length, 10000 };
 
-    H5::DataSet dataset = file.createDataSet(DATASET_NAME, H5::PredType::IEEE_F64LE, H5::DataSpace(1, length), plist);
+    //H5::DSetCreatPropList plist;
+    //hsize_t chunk_dims[1] = {1}; // Chunk size: one row at a time
+    //plist.setChunk(1, chunk_dims);
+
+    //H5::DataSet dataset = file.createDataSet(DATASET_NAME, H5::PredType::NATIVE_ULLONG, memspace);
+    //catch (H5::Exception& e){
+	    //std::cerr << "It happened here" << std::endl;}
+
 
     unsigned long long chunks = length / chunk_length;
     bool use_iterations_limit = true; // limit the total number of waveforms saved, overrides time limit
@@ -81,6 +95,8 @@ int main(int argc, char* argv[]) {
 	     daphne.write_reg(0x2000, {1234});
 	}
 	unsigned long long current_timestamp = daphne.read_reg(0x40500000, 1)[0];
+	//std::cout << "last timestamp: " << last_timestamp << std::endl;
+	//std::cout << "current timestamp: " << current_timestamp << std::endl;
 	// make sure we are not recapturing the same waveform again
 	if (last_timestamp != current_timestamp) {
 	    combined_result.clear();
@@ -93,15 +109,20 @@ int main(int argc, char* argv[]) {
             unsigned long long new_timestamp = daphne.read_reg(0x40500000, 1)[0];
             // only save waveform if no additional triggers happened while reading
 	    if (new_timestamp == current_timestamp) {
-                   for (size_t i = 0; i < combined_result.size(); ++i) {
-		      dataset.write(&combined_result[i], H5::PredType::IEEE_F64LE, memspace, H5::DataSpace(1, 0);
-	              //if (i < combined_result.size() - 1) {
-		      //        hdf5File << " ";
-			// }
-		     // }
-		      //hdf5File << "\n";
-		      ++iteration;
-		}
+		    hsize_t current_dims[2] = {offset[0]+1, offset[1]+3900};
+		    dataset.extend(current_dims);
+
+		    H5::DataSpace new_dataspace = dataset.getSpace();
+		    hsize_t batch_size[2] = {1, 3900};
+		    new_dataspace.selectHyperslab(H5S_SELECT_SET, batch_size, offset);
+
+		    hsize_t mem_dims[2] = {1, 3900};
+		    H5::DataSpace memspace(2, mem_dims);
+
+		    dataset.write(combined_result.data(), uint64_type, memspace, new_dataspace);
+		    offset[0] += 1;
+
+		   ++iteration;
 
 	    last_timestamp = new_timestamp;
             if (iteration % 50 == 0) { // print rate and time/iterations remaining
@@ -133,9 +154,8 @@ int main(int argc, char* argv[]) {
 	if (use_iterations_limit && iteration >= iterations_limit) {
                 break;
 	}
-
         }
-    
+    }
     dataset.close();
     hdf5File.close(); 
 
