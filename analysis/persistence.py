@@ -5,9 +5,17 @@ import time
 import argparse
 from tqdm import tqdm
 import pandas as pd
+import h5py
 
 def main(filename):
-    wvfms = np.genfromtxt(filename, delimiter=' ', max_rows=10000)
+    if '.csv' in filename:
+        wvfms = np.genfromtxt(filename, delimiter=' ', max_rows=10000)
+    elif '.hdf5' in filename:
+        with h5py.File(filename, 'r') as f:
+            wvfms = np.array(f['data'])
+    else:
+        print('AAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHH')
+        raise Exception('File type not recognized')
     window_size = 1
     pedestal_range = (350, 450)
     amplitudes = []
