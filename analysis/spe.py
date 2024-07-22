@@ -6,6 +6,7 @@ import argparse
 from tqdm import tqdm
 import pandas as pd
 from scipy.optimize import curve_fit
+import h5py
 
 def main(filepath):
     startTime = 585
