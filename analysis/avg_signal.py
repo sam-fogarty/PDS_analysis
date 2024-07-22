@@ -5,6 +5,7 @@ import time
 from tqdm import tqdm
 import fire
 import os
+import h5py
 
 def main(*filepath):
     colors = ['r', 'b', 'g', 'k', 'm', 'c', 'y']
@@ -12,7 +13,14 @@ def main(*filepath):
     
     plt.figure(figsize=(8,6))
     for i,filename in enumerate(tqdm(filepath)):
-        data = np.loadtxt(filename, delimiter=' ', skiprows=0)[:]
+        if '.csv' in filename:
+            data = np.loadtxt(filename, delimiter=' ', skiprows=0)[:]
+        elif '.hdf5' in filename:
+            with h5py.File(filename, 'r') as f:
+                data = np.array(f['data'])
+        else:
+            print('AAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHH')
+            raise Exception('File type not recognized')
         wvfm_sum = np.zeros(len(data[0]))
         nwvfm = 0
         for wvfm in data:

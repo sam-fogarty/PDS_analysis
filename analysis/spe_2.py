@@ -6,6 +6,7 @@ import argparse
 from tqdm import tqdm
 from scipy import signal
 from scipy.optimize import curve_fit
+import h5py
 
 def main(filepath):
     startTime = 1138
@@ -18,7 +19,16 @@ def main(filepath):
         return A1*np.exp(-(mu1-x)**2/(2*sigma1))+A2*np.exp(-(mu2-x)**2/(2*sigma2))
     
     plt.figure(figsize=(8,6))
-    data = np.loadtxt(filepath, delimiter=' ', skiprows=0)*-1
+
+    if '.csv' in filepath:
+        data = np.loadtxt(filepath, delimiter=' ', skiprows=0)*-1
+    elif '.hdf5' in filepath:
+        with h5py.File(filepath, 'r') as f:
+            data = np.array(f['data'])*-1
+    else:
+        print('AAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHH')
+        raise Exception('File type not recognized')
+
     integrals = []
     for wvfm in tqdm(data):
         wvfm -= np.mean(wvfm[0:500])

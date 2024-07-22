@@ -4,6 +4,7 @@ import warnings
 import time
 import fire
 import os
+import h5py
 
 class fft:
     def __init__(self, sig, dt=16e-9, plot=False):
@@ -85,7 +86,14 @@ def main(*filenames):
         raise Exception('Include some csv files!')
     median_rms = []
     for i, filename in enumerate(filenames):
-        data = np.loadtxt(filename, delimiter=' ')[0:1000]
+        if '.csv' in filename:
+            data = np.loadtxt(filename, delimiter=' ')[0:1000]
+        elif '.hdf5' in filename:
+            with h5py.File(filename, 'r') as f:
+                data = np.array(f['data'])[0:1000]
+        else:
+            print('AAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHH')
+            raise Exception('File type not recognized')
         rms_values = []
         for wvfm in data:
             rms = calculate_rms_deviation(wvfm)
