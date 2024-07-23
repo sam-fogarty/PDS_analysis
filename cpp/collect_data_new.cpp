@@ -41,9 +41,10 @@ int main(int argc, char* argv[]) {
     H5::DataType uint64_type = H5::PredType::NATIVE_ULLONG;
 
     H5::DSetCreatPropList propList;
-    hsize_t chunk_dims[2] = {1, 1};  // Define the chunk dimensions (1x1 for simplicity)
+    hsize_t chunk_dims[2] = {1, 3900};  // Define the chunk dimensions (1x1 for simplicity)
     propList.setChunk(2, chunk_dims);  // Set the chunk size for the dataset
-
+    //propList.setLayout(H5D_CHUNKED);
+    propList.setDeflate(6);
 
     H5::DataSet dataset = file.createDataSet(DATASET_NAME, uint64_type, dataspace, propList);
 
@@ -77,7 +78,7 @@ int main(int argc, char* argv[]) {
 
     unsigned long long chunks = length / chunk_length;
     bool use_iterations_limit = true; // limit the total number of waveforms saved, overrides time limit
-    unsigned long long iterations_limit = 10000;
+    unsigned long long iterations_limit = 100;
     if (use_iterations_limit){
 	    end_time = end_time + std::chrono::minutes(10000); // make sure script doesn't end prematurely if time limit is reached
     }
@@ -95,8 +96,6 @@ int main(int argc, char* argv[]) {
 	     daphne.write_reg(0x2000, {1234});
 	}
 	unsigned long long current_timestamp = daphne.read_reg(0x40500000, 1)[0];
-	//std::cout << "last timestamp: " << last_timestamp << std::endl;
-	//std::cout << "current timestamp: " << current_timestamp << std::endl;
 	// make sure we are not recapturing the same waveform again
 	if (last_timestamp != current_timestamp) {
 	    combined_result.clear();
