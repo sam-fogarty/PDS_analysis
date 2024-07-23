@@ -13,7 +13,7 @@ public:
     Daphne(const std::string& ip);
     ~Daphne();
     void write_reg(unsigned long long addr, const std::vector<unsigned long long>& data);
-    std::vector<unsigned long long> read_reg(unsigned long long addr, unsigned char size);
+    std::vector<int> read_reg(unsigned long long addr, unsigned char size);
     void close_conn();
 
 private:
