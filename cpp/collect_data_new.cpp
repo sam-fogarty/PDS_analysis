@@ -2,7 +2,7 @@
 #include <vector>
 #include <chrono>
 #include <thread>
-#include "daphne.h"
+#include "daphne_new.h"
 //#include <TFile.h>
 //#include <TTree.h>
 #include <fstream>
@@ -93,7 +93,7 @@ int main(int argc, char* argv[]) {
 	    // read registers by the chunk, then combine
             for (unsigned int i = 0; i < chunks; ++i) {
                 unsigned int address = base_address + i * chunk_length;
-                std::vector<int> doutrec = daphne.read_reg(address, chunk_length);
+		std::vector<int> doutrec = daphne.read_reg(address, chunk_length);
                 combined_result.insert(combined_result.end(), doutrec.begin(), doutrec.end());
             }
             unsigned int new_timestamp = daphne.read_reg(0x40500000, 1)[0];
