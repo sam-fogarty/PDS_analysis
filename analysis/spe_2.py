@@ -9,7 +9,7 @@ from scipy.optimize import curve_fit
 import h5py
 
 def main(filepath):
-    startTime = 1138
+    startTime = 699
     integrationWindow = 15
     window_size = 1 # rolling average window size
 
@@ -24,7 +24,7 @@ def main(filepath):
         data = np.loadtxt(filepath, delimiter=' ', skiprows=0)*-1
     elif '.hdf5' in filepath:
         with h5py.File(filepath, 'r') as f:
-            data = np.array(f['data'])*-1
+            data = np.array(f['data']).astype('float')*-1
     else:
         print('AAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHH')
         raise Exception('File type not recognized')
