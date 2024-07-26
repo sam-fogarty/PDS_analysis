@@ -26,7 +26,7 @@ void Daphne::write_reg(unsigned long long addr, const std::vector<unsigned long 
     sendto(sock, cmd, sizeof(cmd), 0, (struct sockaddr *)&target, sizeof(target));
 }
 
-std::vector<int> Daphne::read_reg(unsigned long long addr, unsigned char size) {
+std::vector<unsigned long long> Daphne::read_reg(unsigned long long addr, unsigned char size) {
     char cmd[10];
     cmd[0] = 0x00; // Command type for read
     cmd[1] = size; // Size of the data to be read
@@ -40,9 +40,9 @@ std::vector<int> Daphne::read_reg(unsigned long long addr, unsigned char size) {
     recvfrom(sock, buffer, sizeof(buffer), 0, NULL, NULL);
 
     // Unpack the response
-    std::vector<int> result(size);
+    std::vector<unsigned long long> result(size);
     for (unsigned char i = 0; i < size; ++i) {
-        result[i] = *((int*)(buffer + 2 + 8 * i));
+        result[i] = *((unsigned long long*)(buffer + 2 + 8 * i));
     }
 
     return result;
