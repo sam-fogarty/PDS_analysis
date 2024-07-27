@@ -37,12 +37,13 @@ def calculate_rms_deviation(array):
 def main(filepath, run_end):
     ###### DCR calculation
     threshold = -7 # set below 1 p.e. level
+    lower_threshold = -15
     run_start = int(filepath.strip('.hdf5').strip('.csv').split('run')[-1])
-    run_end = int(run_end)
     dirname = os.path.dirname(filepath)
     DCR_filename='DCR_measurements.npz'
     mean_rms, std_rms = [],[]
     if run_end is not None:
+        run_end = int(run_end)
         runlog = np.loadtxt('../cpp/run_log.txt', delimiter=' ', dtype=str)
         runs = np.arange(run_start, run_end+1)
         time_hour, time_minute = [], []
@@ -101,7 +102,7 @@ def main(filepath, run_end):
         wvfms = wvfms - baseline[:, np.newaxis]
 
         # find above threshold samples; select waveforms with above threshold samples
-        threshold_mask = wvfms < threshold
+        threshold_mask = (wvfms < threshold) & ~(wvfms < lower_threshold)
         wvfms = wvfms[np.sum(threshold_mask, axis=1) > 0]
         wvfms_orig_indices = wvfms_orig_indices[np.sum(threshold_mask, axis=1) > 0]
         
@@ -126,19 +127,20 @@ def main(filepath, run_end):
                     wvfm_end = end-start+i
                 signal = wvfm[i:wvfm_end]
                 correlation = correlate(signal, template, mode='same')
-                i += 5 # for speed skip ahead
+                i += 10 # for speed skip ahead
                 if (np.max(correlation) > correlation_threshold) and np.any(signal < threshold):
                     # keep track of which waveforms have any good correlations
                     if keep_array[j] == True and np.any(signal < threshold):
                         extra_signals += 1
+                        amplitudes.append(np.min(signal))
                         #np.save(f'wvfm_{i}.npy', wvfms_orig[wvfms_orig_indices[j]])
                     else:
                         keep_array[j] = True
-                        amplitudes.append(np.min(wvfm))
+                        amplitudes.append(np.min(signal))
                         #np.save(f'wvfm_{i}.npy', wvfms_orig[wvfms_orig_indices[j]])
                     i += 500 # skip ahead past the current signal and look for more signals in same waveform
             x +=1
-        #np.save('amplitudes.npy', amplitudes)
+        np.save('amplitudes.npy', amplitudes)
         print(f'Keep {np.sum(keep_array)} waveforms due to good correlation')
         print(f'Found {extra_signals} extra signals in waveforms')
         wvfms = wvfms[keep_array] # keep only waveforms with good correlations
@@ -151,7 +153,7 @@ def main(filepath, run_end):
         DCR = NDCR/totaltime
         DCR_err = np.sqrt(NDCR)/totaltime
         nsipms = 48
-        print(f'DCR = {DCR:.2f} +/- {DCR_err:.2f} Hz, {(DCR/(nsipms*36)):.2f} +/- {(DCR_err/(nsipms*36)):.2f} Hz/mm^2')
+        print(f'DCR = {DCR:.3f} +/- {DCR_err:.3f} Hz, {(DCR/(nsipms*36)):.3f} +/- {(DCR_err/(nsipms*36)):.3f} Hz/mm^2')
         #print('Fractional uncertainty = ', DCR_err/DCR)
 
         if run_end is not None:
@@ -170,8 +172,8 @@ def main(filepath, run_end):
 
     if os.path.exists(DCR_filename) and run_end is not None:
         DCR_data = np.load(DCR_filename)
-        DCR_all = np.concatenate((DCR_data['DCR_all'], DCR_all/(nsipms*36)))
-        DCR_err_all = np.concatenate((DCR_data['DCR_err_all'], DCR_err_all/(nsipms*36)))
+        DCR_all = np.concatenate((DCR_data['DCR_all'], DCR_all))
+        DCR_err_all = np.concatenate((DCR_data['DCR_err_all'], DCR_err_all))
         time_hour = np.concatenate((DCR_data['time_hour'], time_hour))
         time_minute = np.concatenate((DCR_data['time_minute'], time_minute))
         runnumbers_all = np.concatenate((DCR_data['runnumbers_all'], runnumbers_all))
@@ -189,6 +191,6 @@ def main(filepath, run_end):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Estimate Dark Count Rate")
     parser.add_argument('filepath', help='Input filepath')
-    parser.add_argument('run_end', default=None, help='Input filepath')
+    parser.add_argument('--run_end', required=False, default=None, help='Input filepath')
     args = parser.parse_args()
     main(args.filepath, args.run_end)
