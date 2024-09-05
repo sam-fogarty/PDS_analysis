@@ -7,8 +7,8 @@ file = 'DCR_measurements.npz'
 
 fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(12,6), sharex=True)
 data = np.load(file, allow_pickle=True)
-DCR = data['DCR_all']
-DCR_err = data['DCR_err_all']
+DCR = data['DCR_all']/(48*36)
+DCR_err = data['DCR_err_all']/(48*36)
 time_hour = data['time_hour'].astype('float')
 time_minute = data['time_minute'].astype('float')
 runnumbers = data['runnumbers_all'].astype('int')
@@ -57,5 +57,5 @@ axes[1].set_ylabel('mean ADC RMS')
 axes[1].set_xticks(tick_locations)
 axes[1].set_xticklabels(time_label)
 plt.xticks(rotation=45)
-axes[0].set_title('DCR and Waveform RMS (7/26/2024, ERC)')
+axes[0].set_title('DCR and Waveform RMS (8/8/2024, ERC)')
 plt.show()
