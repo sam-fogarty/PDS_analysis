@@ -6,6 +6,7 @@ from tqdm import tqdm
 from scipy.signal import correlate
 import h5py
 import os
+import time as timer
 
 def apply_filter(waveform, cutoff_freq, order):
     """
@@ -34,18 +35,27 @@ def calculate_rms_deviation(array):
     rms_deviation = np.sqrt(mean_squared_deviation)
     return rms_deviation
 
-def main(filepath, run_end):
+def main(filepath, run_end, DCR_filename, runlog, template_path):
     ###### DCR calculation
-    threshold = -7 # set below 1 p.e. level
-    lower_threshold = -15
+    threshold = -8 # set below 1 p.e. level
+    lower_threshold = -30
     run_start = int(filepath.strip('.hdf5').strip('.csv').split('run')[-1])
     dirname = os.path.dirname(filepath)
-    DCR_filename='DCR_measurements.npz'
+    if DCR_filename is None:
+        DCR_filename='DCR_measurements.npz'
+    data_type = filepath.split('.')[-1]
     mean_rms, std_rms = [],[]
     if run_end is not None:
         run_end = int(run_end)
-        runlog = np.loadtxt('../cpp/run_log.txt', delimiter=' ', dtype=str)
-        runs = np.arange(run_start, run_end+1)
+        if runlog is not None:
+            runlog_path = runlog
+        else:
+            runlog_path='../cpp/run_log.txt'
+        runlog = np.loadtxt(runlog_path, delimiter=' ', dtype=str)
+        runs=[]
+        for i in range(len(runlog)):
+            runs.append(int(runlog[i][1].strip(':')))
+        #runs = np.arange(run_start, run_end+1)
         time_hour, time_minute = [], []
         DCR_all, DCR_err_all = [], []
         runnumbers_all = []
@@ -53,6 +63,7 @@ def main(filepath, run_end):
         runs = [run_start]
     k=-1
     for run in runs:
+        start_time = timer.time()
         if os.path.exists(DCR_filename) and run_end is not None:
             DCR_data = np.load(DCR_filename)
             runnumbers_file = DCR_data['runnumbers_all']
@@ -61,11 +72,16 @@ def main(filepath, run_end):
                 continue
             else:
                 k+=1
+        if run >= run_end:
+            break
         # load data
         skiprows=0
-        run_filepath = f'{dirname}/run{run}.hdf5'
+        run_filepath = f'{dirname}/run{run}.{data_type}'
         
         print(f'Loading waveforms from {run_filepath}')
+        if not os.path.exists(run_filepath):
+            print(f'{run_filepath} not found in log file, continuing')
+            continue
         if '.csv' in filepath:
             wvfms_orig = np.loadtxt(run_filepath, delimiter=' ', skiprows=skiprows)
         elif '.hdf5' in filepath:
@@ -102,11 +118,14 @@ def main(filepath, run_end):
         wvfms = wvfms - baseline[:, np.newaxis]
 
         # find above threshold samples; select waveforms with above threshold samples
-        threshold_mask = (wvfms < threshold) & ~(wvfms < lower_threshold)
-        wvfms = wvfms[np.sum(threshold_mask, axis=1) > 0]
-        wvfms_orig_indices = wvfms_orig_indices[np.sum(threshold_mask, axis=1) > 0]
-        
-        template = np.load('Single_PE_Template_2.npy')
+        threshold_mask = (wvfms < threshold) #& ~(wvfms < lower_threshold)
+        points_above = 0
+        wvfms = wvfms[np.sum(threshold_mask, axis=1) > points_above]
+        wvfms_orig_indices = wvfms_orig_indices[np.sum(threshold_mask, axis=1) > points_above]
+        if template_path is None:
+            template = np.load('Single_PE_Template_44pt5V_2250VG.npy')
+        else:
+            template = np.load(template_path)
         start, end = 50, 550 # select signal in template
         template = template[start:end]
 
@@ -114,7 +133,7 @@ def main(filepath, run_end):
         extra_signals = 0
         keep_array = np.zeros(len(wvfms), dtype=bool)
         amplitudes = []
-
+        points_above_threshold = []
         x = 0
         # loop through each waveform and find ones with good correlation between template and itself
         for j, wvfm in tqdm(enumerate(wvfms)):
@@ -132,15 +151,18 @@ def main(filepath, run_end):
                     # keep track of which waveforms have any good correlations
                     if keep_array[j] == True and np.any(signal < threshold):
                         extra_signals += 1
-                        amplitudes.append(np.min(signal))
+                        #amplitudes.append(np.min(signal))
                         #np.save(f'wvfm_{i}.npy', wvfms_orig[wvfms_orig_indices[j]])
                     else:
                         keep_array[j] = True
-                        amplitudes.append(np.min(signal))
+                        #amplitudes.append(np.min(signal))
                         #np.save(f'wvfm_{i}.npy', wvfms_orig[wvfms_orig_indices[j]])
+                    #print('points above threshold = ', np.sum(signal < threshold))
+                    #points_above_threshold.append(np.sum(signal < threshold))
                     i += 500 # skip ahead past the current signal and look for more signals in same waveform
             x +=1
-        np.save('amplitudes.npy', amplitudes)
+        #np.save('amplitudes.npy', amplitudes)
+        #np.save('points_above_threshold.npy', points_above_threshold)
         print(f'Keep {np.sum(keep_array)} waveforms due to good correlation')
         print(f'Found {extra_signals} extra signals in waveforms')
         wvfms = wvfms[keep_array] # keep only waveforms with good correlations
@@ -169,7 +191,8 @@ def main(filepath, run_end):
             DCR_all.append(DCR)
             DCR_err_all.append(DCR_err)
             runnumbers_all.append(run)
-
+        end_time = timer.time()
+        print(f'Total time = {(end_time-start_time):.2f} seconds')
     if os.path.exists(DCR_filename) and run_end is not None:
         DCR_data = np.load(DCR_filename)
         DCR_all = np.concatenate((DCR_data['DCR_all'], DCR_all))
@@ -192,5 +215,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Estimate Dark Count Rate")
     parser.add_argument('filepath', help='Input filepath')
     parser.add_argument('--run_end', required=False, default=None, help='Input filepath')
+    parser.add_argument('--DCR_filename', required=False, default=None, help='Name of DCR file')
+    parser.add_argument('--runlog', required=False, default=None, help='Path to runlog')
+    parser.add_argument('--template', required=False, default=None, help='Path to single p.e. template')
     args = parser.parse_args()
-    main(args.filepath, args.run_end)
+    main(args.filepath, args.run_end, args.DCR_filename, args.runlog, args.template)
