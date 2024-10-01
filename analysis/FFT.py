@@ -4,6 +4,7 @@ import warnings
 import time
 import fire
 import os
+import h5py
 
 class fft:
     def __init__(self, sig, dt=16e-9, plot=False):
@@ -76,19 +77,27 @@ def calculate_rms_deviation(array):
     rms_deviation = np.sqrt(mean_squared_deviation)
     return rms_deviation
 
-def main(*runnumbers):
+def main(*filenames):
     colors = ['r', 'b', 'k', 'm', 'y', 'g']
     linestyles = ['-', '--', '-.', '.', '-', '--']
-    if not len(runnumbers):
+    if not len(filenames):
         raise Exception('Include some run numbers to plot!')
-    for i, runnumber in enumerate(runnumbers):
-        data = np.loadtxt(f'../cpp/data/run{runnumber}.csv', delimiter=' ', max_rows=1000)
-        fft_data = mean_fft(data)
-        plt.plot(fft_data.x, fft_data.y, color=colors[i], label=f'run{runnumber}', alpha=0.5)
+    for i, filename in enumerate(filenames):
+        if '.csv' in filename:
+            wvfms = np.genfromtxt(filename, delimiter=' ', max_rows=5000)
+        elif '.hdf5' in filename:
+            with h5py.File(filename, 'r') as f:
+                wvfms = np.array(f['data']).astype('float')
+        else:
+            print('AAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHH')
+            raise Exception('File type not recognized')
+        #data = np.loadtxt(f'../cpp/data/run{runnumber}.csv', delimiter=' ', max_rows=1000)
+        fft_data = mean_fft(wvfms)
+        plt.plot(fft_data.x, fft_data.y, color=colors[i], label=f'{os.path.basename(filename)}', alpha=0.5)
     #plt.hist(rms_values)
     plt.title(f'Mean FFTs of DAPHNE Waveforms')
     plt.legend()
-    plt.ylim([-120, -60])
+    #plt.ylim([-120, -90])
     plt.ylabel("dBFS")
     plt.xlabel("MHz")
     plt.grid(axis='x',color="0.95")
