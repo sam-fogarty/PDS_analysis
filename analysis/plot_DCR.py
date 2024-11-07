@@ -1,7 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-file = 'DCR_measurements.npz'
+file = 'DCR_results_1105/DCR_measurements_802.npz'
+axes[0].set_title('DCR and Waveform RMS (8/02/2024, ERC)')
 #files = ['DCR_info_6222024_1.npz', 'DCR_info_6222024_2.npz', 'DCR_info_6222024_3.npz', 'DCR_info_6222024_4.npz']
 #files = ['DCR_info_6232024_1.npz', 'DCR_info_6232024_2.npz', 'DCR_info_6232024_3.npz', 'DCR_info_6232024_4.npz', 'DCR_info_6232024_5.npz', 'DCR_info_6232024_6.npz']
 
@@ -14,6 +15,7 @@ time_minute = data['time_minute'].astype('float')
 runnumbers = data['runnumbers_all'].astype('int')
 mean_rms = data['mean_rms'].astype('float')
 std_rms = data['std_rms'].astype('float')
+signal_rms = data['signal_rms'].astype('float')
 time = []
 time_float = []
 
@@ -57,5 +59,5 @@ axes[1].set_ylabel('mean ADC RMS')
 axes[1].set_xticks(tick_locations)
 axes[1].set_xticklabels(time_label)
 plt.xticks(rotation=45)
-axes[0].set_title('DCR and Waveform RMS (8/8/2024, ERC)')
+#axes[0].set_title('DCR and Waveform RMS (8/02/2024, ERC)')
 plt.show()
