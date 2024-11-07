@@ -10,7 +10,7 @@ import h5py
 
 def main(filepath):
     startTime = 699
-    integrationWindow = 15
+    integrationWindow = 30
     window_size = 1 # rolling average window size
 
     do_gaussian_fit = True
@@ -32,6 +32,9 @@ def main(filepath):
     integrals = []
     for wvfm in tqdm(data):
         wvfm -= np.mean(wvfm[0:500])
+        #startTime = np.argmin(np.diff(wvfm))-6
+        #print(startTime)
+        
         integral = np.trapz(wvfm[startTime:startTime+integrationWindow], dx=1)
         integrals.append(integral)
     hist_range = (-100, 1000)
