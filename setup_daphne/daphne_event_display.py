@@ -27,12 +27,13 @@ def update_canvas(canvas, x_data, y_data):
     graph = ROOT.TGraph(len(x_data), array('d', x_data), array('d', y_data))
     graph.SetLineColor(ROOT.kBlue)
     graph.Draw("ALP")
-    #graph.GetYaxis().SetRangeUser(8013, 8022)
-    #graph.GetXaxis().SetRangeUser(0, 800) 
+    graph.SetTitle('LED-Generated Photon Detector Signals')
+    #graph.GetYaxis().SetRangeUser(7940, 7990)
+    #graph.GetXaxis().SetRangeUser(650, 1000) 
     canvas.Update()
     #print(y_data[0:10])
 
-length=1500 # 4000 max
+length=4000 # 4000 max
 chunk_length=50 # how many points to read at a time
 chunks=int(length/chunk_length)
 
@@ -44,8 +45,8 @@ Channel_hex_base = 0x10000
 ip = f'10.73.137.110'
 device = ivtools.daphne(ip)
 print("DAPHNE firmware version %0X" % device.read_reg(0x9000,1)[2])
-afe, chan = 0, 4
-nWvfms_avg = 70 # number of waveforms to average for rolling average, set to 1 to plot each waveform without rolling average
+afe, chan = 4, 4
+nWvfms_avg = 10 # number of waveforms to average for rolling average, set to 1 to plot each waveform without rolling average
 do_software_trigger = False
 
 # Create a ROOT canvas for plots
@@ -67,7 +68,7 @@ both_lists_filled = False
 try:
     while True:
         if nWvfms_avg == 1:
-            time.sleep(0.25)
+            time.sleep(0.1)
         if do_software_trigger:
             device.write_reg(0x2000, [1234]) # trigger SPI buffer
         y_data = np.zeros(length)
@@ -91,9 +92,10 @@ try:
                 elif nWvfms_abs >= nWvfms_avg:
                     y_data_list_next[nWvfms, :] = y_data
                     y_data_avg = (np.sum(y_data_list_last[nWvfms+1:], axis=0)+np.sum(y_data_list_next[0:nWvfms+1], axis=0))/nWvfms_avg
+                    #update_canvas(canvas, x_data, y_data_avg-np.mean(y_data_avg[0:100]))
                     update_canvas(canvas, x_data, y_data_avg)
                 if nWvfms == nWvfms_avg-1 and nWvfms_abs >= 2*nWvfms_avg-1:
-                    # replace y_data_list_last with y_data_list_next
+                        # replace y_data_list_last with y_data_list_next
                     y_data_list_last = np.copy(y_data_list_next)
                 if nWvfms == nWvfms_avg-1:
                     nWvfms = 0
